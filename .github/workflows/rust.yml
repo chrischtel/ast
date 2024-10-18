@@ -31,6 +31,7 @@ jobs:
     - name: Build zlib from source
       run: |
         curl -L https://zlib.net/zlib-1.2.11.tar.gz -o zlib-1.2.11.tar.gz
+        file zlib-1.2.11.tar.gz
         tar -xzf zlib-1.2.11.tar.gz
         cd zlib-1.2.11
         ./configure --static
