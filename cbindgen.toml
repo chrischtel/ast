@@ -1,0 +1,7 @@
+language = "C"
+
+[parse]
+clean = true
+
+[export]
+include = ["add"]  # TODO: remove add function from the generated header file
