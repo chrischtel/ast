@@ -31,10 +31,10 @@ jobs:
 
     - name: Build zlib from source
       run: |
-        curl -L https://zlib.net/zlib-1.2.11.tar.gz -o zlib-1.2.11.tar.gz
-        file zlib-1.2.11.tar.gz
-        tar -xzf zlib-1.2.11.tar.gz
-        cd zlib-1.2.11
+        curl -L https://zlib.net/zlib-1.3.1.tar.gz -o zlib-1.3.1.tar.gz
+        file zlib-1.3.1.tar.gz
+        tar -xzf zlib-1.3.1.tar.gz
+        cd zlib-1.3.1
         ./configure --static
         make
         sudo make install
