@@ -7,3 +7,6 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
+fitsio = "0.21.5"
+image = "0.25.4"
+imageproc = "0.25.0"
