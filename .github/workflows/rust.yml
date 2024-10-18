@@ -5,17 +5,19 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write  # Grant write permission to contents for the GITHUB_TOKEN
+
 jobs:
   build-and-release:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     # Install dependencies on Linux
     - name: Install build tools and dependencies on Linux
@@ -114,41 +116,39 @@ jobs:
     - name: Create Release
       id: create_release
       uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
+        tag_name: ${{ github.ref_name }}  # Use github.ref_name to get the tag without the prefix
+        release_name: Release ${{ github.ref_name }}
         draft: false
         prerelease: ${{ steps.prerelease_check.outputs.prerelease }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # Upload Release Binary
     - name: Upload Release Binary
       uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: target/release/ast
         asset_name: ast_${{ matrix.os }}
         asset_content_type: application/octet-stream
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # Upload C bindings
     - name: Upload C bindings
       uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: target/release/ast.h
         asset_name: ast_${{ matrix.os }}.h
         asset_content_type: text/plain
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     # Upload Library Files
     - name: Upload Library Files
       uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: |
@@ -164,3 +164,5 @@ jobs:
           ast_${{ matrix.os }}.dll
           ast_${{ matrix.os }}.lib
         asset_content_type: application/octet-stream
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
