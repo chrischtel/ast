@@ -54,7 +54,7 @@ jobs:
       run: |
         curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio_latest.tar.gz -o cfitsio_latest.tar.gz
         tar -xzf cfitsio_latest.tar.gz
-        cd cfitsio
+        cd cfitsio_latest
         ./configure --enable-sse2 --enable-reentrant --disable-shared
         make
         sudo make install
