@@ -10,3 +10,6 @@ crate-type = ["cdylib", "staticlib"]
 fitsio = "0.21.5"
 image = "0.25.4"
 imageproc = "0.25.0"
+
+[build-dependencies]
+cc = "1.0"

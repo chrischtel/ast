@@ -25,11 +25,17 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential curl zlib1g-dev libcfitsio-dev
+          sudo apt-get install -y build-essential curl zlib1g-dev
+          curl -L https://heasarc.gsfc.nasa.gov/FTP/software/fitsio/c/cfitsio_latest.tar.gz -o cfitsio_latest.tar.gz
+          tar -xzf cfitsio_latest.tar.gz
+          cd cfitsio
+          ./configure --enable-sse2 --enable-reentrant --disable-shared
+          make
+          sudo make install
           echo "ZLIB_LIB_DIR=/usr/lib" >> $GITHUB_ENV
           echo "ZLIB_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
-          echo "CFITSIO_LIB_DIR=/usr/lib" >> $GITHUB_ENV
-          echo "CFITSIO_INCLUDE_DIR=/usr/include" >> $GITHUB_ENV
+          echo "CFITSIO_LIB_DIR=/usr/local/lib" >> $GITHUB_ENV
+          echo "CFITSIO_INCLUDE_DIR=/usr/local/include" >> $GITHUB_ENV
 
       # Install dependencies on macOS
       - name: Install build tools and dependencies on macOS
