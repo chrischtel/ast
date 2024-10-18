@@ -45,7 +45,7 @@ jobs:
       run: cargo test
 
     - name: Generate C bindings
-      run: cbindgen --config cbindgen.toml --crate your_crate_name --output target/release/your_crate_name.h
+      run: cbindgen --config cbindgen.toml --crate ast --output target/release/ast.h
 
     - name: Determine if pre-release
       id: prerelease_check
@@ -73,8 +73,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: target/release/your_binary_name
-        asset_name: your_binary_name_${{ matrix.os }}
+        asset_path: target/release/ast
+        asset_name: ast_${{ matrix.os }}
         asset_content_type: application/octet-stream
 
     - name: Upload C bindings
@@ -83,8 +83,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: target/release/your_crate_name.h
-        asset_name: your_crate_name_${{ matrix.os }}.h
+        asset_path: target/release/ast.h
+        asset_name: ast_${{ matrix.os }}.h
         asset_content_type: text/plain
 
     - name: Upload Library Files
@@ -94,13 +94,13 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: |
-          target/release/libyour_crate_name.a
-          target/release/libyour_crate_name.so
-          target/release/libyour_crate_name.dylib
-          target/release/your_crate_name.dll
+          target/release/libast.a
+          target/release/libast.so
+          target/release/libast.dylib
+          target/release/ast.dll
         asset_name: |
-          libyour_crate_name_${{ matrix.os }}.a
-          libyour_crate_name_${{ matrix.os }}.so
-          libyour_crate_name_${{ matrix.os }}.dylib
-          your_crate_name_${{ matrix.os }}.dll
+          libast_${{ matrix.os }}.a
+          libast_${{ matrix.os }}.so
+          libast_${{ matrix.os }}.dylib
+          ast_${{ matrix.os }}.dll
         asset_content_type: application/octet-stream
