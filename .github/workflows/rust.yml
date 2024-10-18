@@ -98,9 +98,11 @@ jobs:
           target/release/libast.so
           target/release/libast.dylib
           target/release/ast.dll
+          target/release/ast.lib
         asset_name: |
           libast_${{ matrix.os }}.a
           libast_${{ matrix.os }}.so
           libast_${{ matrix.os }}.dylib
           ast_${{ matrix.os }}.dll
+          ast_${{ matrix.os }}.lib
         asset_content_type: application/octet-stream
