@@ -1,22 +1,106 @@
-name: Rust
+name: Release Rust Library
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
-
-env:
-  CARGO_TERM_COLOR: always
+    tags:
+      - 'v*'
 
 jobs:
-  build:
-
-    runs-on: ubuntu-latest
+  build-and-release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Install dependencies on Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get update && sudo apt-get install -y libcfitsio-dev zlib1g-dev
+
+    - name: Install dependencies on macOS
+      if: matrix.os == 'macos-latest'
+      run: brew install cfitsio zlib
+
+    - name: Install dependencies on Windows
+      if: matrix.os == 'windows-latest'
+      run: |
+        choco install cfitsio zlib
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+
+    - name: Install cbindgen
+      run: cargo install cbindgen
+
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release
+
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo test
+
+    - name: Generate C bindings
+      run: cbindgen --config cbindgen.toml --crate your_crate_name --output target/release/your_crate_name.h
+
+    - name: Determine if pre-release
+      id: prerelease_check
+      run: |
+        if [[ "${GITHUB_REF##*/}" == *"-alpha"* || "${GITHUB_REF##*/}" == *"-beta"* || "${GITHUB_REF##*/}" == *"-rc"* ]]; then
+          echo "::set-output name=prerelease::true"
+        else
+          echo "::set-output name=prerelease::false"
+        fi
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: ${{ steps.prerelease_check.outputs.prerelease }}
+
+    - name: Upload Release Binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: target/release/your_binary_name
+        asset_name: your_binary_name_${{ matrix.os }}
+        asset_content_type: application/octet-stream
+
+    - name: Upload C bindings
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: target/release/your_crate_name.h
+        asset_name: your_crate_name_${{ matrix.os }}.h
+        asset_content_type: text/plain
+
+    - name: Upload Library Files
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: |
+          target/release/libyour_crate_name.a
+          target/release/libyour_crate_name.so
+          target/release/libyour_crate_name.dylib
+          target/release/your_crate_name.dll
+        asset_name: |
+          libyour_crate_name_${{ matrix.os }}.a
+          libyour_crate_name_${{ matrix.os }}.so
+          libyour_crate_name_${{ matrix.os }}.dylib
+          your_crate_name_${{ matrix.os }}.dll
+        asset_content_type: application/octet-stream
