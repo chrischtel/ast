@@ -63,21 +63,25 @@ jobs:
           .\vcpkg\vcpkg.exe install zlib:x64-windows-static
           .\vcpkg\vcpkg.exe install cfitsio:x64-windows-static
 
-      # Set environment variables for Rust build
-      - name: Set environment variables for Rust build
+      # Set environment variables for Rust build on Windows
+      - name: Set environment variables for Rust build on Windows
+        if: matrix.os == 'windows-latest'
+        shell: powershell
         run: |
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            echo "VCPKG_ROOT=${{ github.workspace }}\\vcpkg" >> $GITHUB_ENV
-            echo "ZLIB_LIB_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\lib" >> $GITHUB_ENV
-            echo "ZLIB_INCLUDE_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\include" >> $GITHUB_ENV
-            echo "CFITSIO_LIB_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\lib" >> $GITHUB_ENV
-            echo "CFITSIO_INCLUDE_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\include" >> $GITHUB_ENV
-          else
-            echo "ZLIB_LIB_DIR=$HOME/zlib/lib" >> $GITHUB_ENV
-            echo "ZLIB_INCLUDE_DIR=$HOME/zlib/include" >> $GITHUB_ENV
-            echo "CFITSIO_LIB_DIR=$HOME/cfitsio/lib" >> $GITHUB_ENV
-            echo "CFITSIO_INCLUDE_DIR=$HOME/cfitsio/include" >> $GITHUB_ENV
-          fi
+          $env:GITHUB_ENV += "VCPKG_ROOT=${{ github.workspace }}\vcpkg`n"
+          $env:GITHUB_ENV += "ZLIB_LIB_DIR=${{ github.workspace }}\vcpkg\installed\x64-windows-static\lib`n"
+          $env:GITHUB_ENV += "ZLIB_INCLUDE_DIR=${{ github.workspace }}\vcpkg\installed\x64-windows-static\include`n"
+          $env:GITHUB_ENV += "CFITSIO_LIB_DIR=${{ github.workspace }}\vcpkg\installed\x64-windows-static\lib`n"
+          $env:GITHUB_ENV += "CFITSIO_INCLUDE_DIR=${{ github.workspace }}\vcpkg\installed\x64-windows-static\include"
+
+      # Set environment variables for Rust build on Unix
+      - name: Set environment variables for Rust build on Unix
+        if: matrix.os != 'windows-latest'
+        run: |
+          echo "ZLIB_LIB_DIR=$HOME/zlib/lib" >> $GITHUB_ENV
+          echo "ZLIB_INCLUDE_DIR=$HOME/zlib/include" >> $GITHUB_ENV
+          echo "CFITSIO_LIB_DIR=$HOME/cfitsio/lib" >> $GITHUB_ENV
+          echo "CFITSIO_INCLUDE_DIR=$HOME/cfitsio/include" >> $GITHUB_ENV
 
       # Set up Rust toolchain
       - name: Set up Rust
@@ -123,12 +127,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Download All Artifacts
+      # Download All Artifacts from All OS Builds
+      - name: Download Ubuntu Artifacts
         uses: actions/download-artifact@v3
         with:
-          name: ${{ matrix.os }}-artifacts
-          path: ./artifacts
+          name: ubuntu-latest-artifacts
+          path: ./artifacts/ubuntu
 
+      - name: Download macOS Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: macos-latest-artifacts
+          path: ./artifacts/macos
+
+      - name: Download Windows Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: windows-latest-artifacts
+          path: ./artifacts/windows
+
+      # Determine if pre-release
       - name: Determine if pre-release
         id: prerelease_check
         run: |
@@ -138,6 +156,7 @@ jobs:
             echo "prerelease=false" >> $GITHUB_OUTPUT
           fi
 
+      # Create GitHub Release
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -149,17 +168,23 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Upload Release Assets
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ github.ref_name }}
           files: |
-            ./artifacts/ast
-            ./artifacts/ast.h
-            ./artifacts/libast.a
-            ./artifacts/libast.so
-            ./artifacts/libast.dylib
-            ./artifacts/ast.dll
-            ./artifacts/ast.lib
+            ./artifacts/ubuntu/ast
+            ./artifacts/ubuntu/ast.h
+            ./artifacts/ubuntu/libast.a
+            ./artifacts/ubuntu/libast.so
+            ./artifacts/ubuntu/libast.dylib
+            ./artifacts/macos/ast
+            ./artifacts/macos/ast.h
+            ./artifacts/macos/libast.a
+            ./artifacts/macos/libast.so
+            ./artifacts/macos/libast.dylib
+            ./artifacts/windows/ast.dll
+            ./artifacts/windows/ast.lib
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
