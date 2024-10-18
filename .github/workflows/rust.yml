@@ -9,7 +9,7 @@ permissions:
   contents: write  # Grant write permission to contents for the GITHUB_TOKEN
 
 jobs:
-  build-and-release:
+  build:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -17,153 +17,149 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Install dependencies on Linux
-    - name: Install build tools and dependencies on Linux
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential curl zlib1g-dev libcfitsio-dev
+      # Install dependencies on Linux
+      - name: Install build tools and dependencies on Linux
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential curl zlib1g-dev libcfitsio-dev
 
-    # Install dependencies on macOS
-    - name: Install build tools and dependencies on macOS
-      if: matrix.os == 'macos-latest'
-      run: |
-        brew update
-        brew install cmake zlib cfitsio
+      # Install dependencies on macOS
+      - name: Install build tools and dependencies on macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew update
+          brew install cmake zlib cfitsio
 
-    # Install Visual Studio Build Tools on Windows
-    - name: Install Visual Studio Build Tools on Windows
-      if: matrix.os == 'windows-latest'
-      shell: powershell
-      run: |
-        $packageName = 'visualstudio2019buildtools'
-        $package = choco list --local-only | Where-Object { $_ -match $packageName }
-        if (-not $package) {
-          choco install $packageName --includeOptional --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --quiet --norestart" -y
-        } else {
-          Write-Host "Visual Studio Build Tools already installed"
-        }
+      # Install Visual Studio Build Tools on Windows
+      - name: Install Visual Studio Build Tools on Windows
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          $packageName = 'visualstudio2019buildtools'
+          $package = choco list --local-only | Where-Object { $_ -match $packageName }
+          if (-not $package) {
+            choco install $packageName --includeOptional --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools --quiet --norestart" -y
+          } else {
+            Write-Host "Visual Studio Build Tools already installed"
+          }
 
-    # Install vcpkg on Windows
-    - name: Install vcpkg
-      if: matrix.os == 'windows-latest'
-      shell: powershell
-      run: |
-        git clone https://github.com/microsoft/vcpkg.git
-        .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+      # Install vcpkg on Windows
+      - name: Install vcpkg
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
-    # Install zlib and cfitsio via vcpkg on Windows
-    - name: Install zlib and cfitsio via vcpkg
-      if: matrix.os == 'windows-latest'
-      shell: powershell
-      run: |
-        .\vcpkg\vcpkg.exe install zlib:x64-windows-static
-        .\vcpkg\vcpkg.exe install cfitsio:x64-windows-static
+      # Install zlib and cfitsio via vcpkg on Windows
+      - name: Install zlib and cfitsio via vcpkg
+        if: matrix.os == 'windows-latest'
+        shell: powershell
+        run: |
+          .\vcpkg\vcpkg.exe install zlib:x64-windows-static
+          .\vcpkg\vcpkg.exe install cfitsio:x64-windows-static
 
-    # Set environment variables for Rust build
-    - name: Set environment variables for Rust build
-      run: |
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
-          echo "VCPKG_ROOT=${{ github.workspace }}\\vcpkg" >> $GITHUB_ENV
-          echo "ZLIB_LIB_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\lib" >> $GITHUB_ENV
-          echo "ZLIB_INCLUDE_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\include" >> $GITHUB_ENV
-          echo "CFITSIO_LIB_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\lib" >> $GITHUB_ENV
-          echo "CFITSIO_INCLUDE_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\include" >> $GITHUB_ENV
-        else
-          echo "ZLIB_LIB_DIR=$HOME/zlib/lib" >> $GITHUB_ENV
-          echo "ZLIB_INCLUDE_DIR=$HOME/zlib/include" >> $GITHUB_ENV
-          echo "CFITSIO_LIB_DIR=$HOME/cfitsio/lib" >> $GITHUB_ENV
-          echo "CFITSIO_INCLUDE_DIR=$HOME/cfitsio/include" >> $GITHUB_ENV
-        fi
+      # Set environment variables for Rust build
+      - name: Set environment variables for Rust build
+        run: |
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            echo "VCPKG_ROOT=${{ github.workspace }}\\vcpkg" >> $GITHUB_ENV
+            echo "ZLIB_LIB_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\lib" >> $GITHUB_ENV
+            echo "ZLIB_INCLUDE_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\include" >> $GITHUB_ENV
+            echo "CFITSIO_LIB_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\lib" >> $GITHUB_ENV
+            echo "CFITSIO_INCLUDE_DIR=${{ github.workspace }}\\vcpkg\\installed\\x64-windows-static\\include" >> $GITHUB_ENV
+          else
+            echo "ZLIB_LIB_DIR=$HOME/zlib/lib" >> $GITHUB_ENV
+            echo "ZLIB_INCLUDE_DIR=$HOME/zlib/include" >> $GITHUB_ENV
+            echo "CFITSIO_LIB_DIR=$HOME/cfitsio/lib" >> $GITHUB_ENV
+            echo "CFITSIO_INCLUDE_DIR=$HOME/cfitsio/include" >> $GITHUB_ENV
+          fi
 
-    # Set up Rust toolchain
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
+      # Set up Rust toolchain
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
 
-    # Install cbindgen
-    - name: Install cbindgen
-      run: cargo install cbindgen
+      # Install cbindgen
+      - name: Install cbindgen
+        run: cargo install cbindgen
 
-    # Build the project
-    - name: Build
-      run: cargo build --release
+      # Build the project
+      - name: Build
+        run: cargo build --release
 
-    # Run tests
-    - name: Run tests
-      run: cargo test
+      # Run tests
+      - name: Run tests
+        run: cargo test
 
-    # Generate C bindings
-    - name: Generate C bindings
-      run: cbindgen --config cbindgen.toml --crate ast --output target/release/ast.h
+      # Generate C bindings
+      - name: Generate C bindings
+        run: cbindgen --config cbindgen.toml --crate ast --output target/release/ast.h
 
-    # Determine if pre-release
-    - name: Determine if pre-release
-      id: prerelease_check
-      shell: bash
-      run: |
-        if [[ "${GITHUB_REF##*/}" == *"-alpha"* || "${GITHUB_REF##*/}" == *"-beta"* || "${GITHUB_REF##*/}" == *"-rc"* ]]; then
-          echo "prerelease=true" >> $GITHUB_OUTPUT
-        else
-          echo "prerelease=false" >> $GITHUB_OUTPUT
-        fi
+      # Upload Artifacts
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}-artifacts
+          path: |
+            target/release/ast
+            target/release/ast.h
+            target/release/libast.a
+            target/release/libast.so
+            target/release/libast.dylib
+            target/release/ast.dll
+            target/release/ast.lib
 
-    # Create GitHub Release
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      with:
-        tag_name: ${{ github.ref_name }}  # Use github.ref_name to get the tag without the prefix
-        release_name: Release ${{ github.ref_name }}
-        draft: false
-        prerelease: ${{ steps.prerelease_check.outputs.prerelease }}
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-    # Upload Release Binary
-    - name: Upload Release Binary
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: target/release/ast
-        asset_name: ast_${{ matrix.os }}
-        asset_content_type: application/octet-stream
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.os }}-artifacts
+          path: ./artifacts
 
-    # Upload C bindings
-    - name: Upload C bindings
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: target/release/ast.h
-        asset_name: ast_${{ matrix.os }}.h
-        asset_content_type: text/plain
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Determine if pre-release
+        id: prerelease_check
+        run: |
+          if [[ "${GITHUB_REF##*/}" == *"-alpha"* || "${GITHUB_REF##*/}" == *"-beta"* || "${GITHUB_REF##*/}" == *"-rc"* ]]; then
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
-    # Upload Library Files
-    - name: Upload Library Files
-      uses: actions/upload-release-asset@v1
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: |
-          target/release/libast.a
-          target/release/libast.so
-          target/release/libast.dylib
-          target/release/ast.dll
-          target/release/ast.lib
-        asset_name: |
-          libast_${{ matrix.os }}.a
-          libast_${{ matrix.os }}.so
-          libast_${{ matrix.os }}.dylib
-          ast_${{ matrix.os }}.dll
-          ast_${{ matrix.os }}.lib
-        asset_content_type: application/octet-stream
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ steps.prerelease_check.outputs.prerelease }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: |
+            ./artifacts/ast
+            ./artifacts/ast.h
+            ./artifacts/libast.a
+            ./artifacts/libast.so
+            ./artifacts/libast.dylib
+            ./artifacts/ast.dll
+            ./artifacts/ast.lib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
